@@ -1,0 +1,664 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TalismanLeads API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.talismanleads.io/v1"
+    }
+  ],
+  "paths": {
+    "/account": {
+      "get": {
+        "operationId": "getAccount",
+        "summary": "Your balance",
+        "description": "Your balance and the limits in force.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Your balance",
+            "content": {
+              "application/json": {
+                "example": {
+                  "balance": "100.00",
+                  "currency": "USD",
+                  "key": {
+                    "id": "11111111-1111-4111-8111-111111111111",
+                    "scopes": [
+                      "read",
+                      "orders"
+                    ]
+                  },
+                  "limits": {
+                    "reads_per_minute": 60,
+                    "result_downloads_per_minute": 30,
+                    "uploads_per_minute": 10,
+                    "estimates_per_minute": 10,
+                    "orders_per_minute": 10,
+                    "open_task_parts": 20
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkers": {
+      "get": {
+        "operationId": "getCheckers",
+        "summary": "List the checkers",
+        "description": "What this account can order right now, at its prices. A paused or blocked checker is not listed.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List the checkers",
+            "content": {
+              "application/json": {
+                "example": {
+                  "checkers": [
+                    {
+                      "id": "whatsapp_status_detection",
+                      "name": "WhatsApp Status Detection",
+                      "input": "phone",
+                      "price": {
+                        "amount": "3.00",
+                        "per_entries": 10000,
+                        "currency": "USD"
+                      },
+                      "minimum_entries": 0,
+                      "minimum_billed_entries": 2000,
+                      "calling_code": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/uploads": {
+      "post": {
+        "operationId": "createUpload",
+        "summary": "Upload a large list",
+        "description": "A link to send a file to, straight to storage. Send it with PUT and the headers given. The link lasts 2 hours.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "size_bytes"
+                ],
+                "properties": {
+                  "size_bytes": {
+                    "type": "integer",
+                    "description": "The size of the file, in bytes."
+                  },
+                  "file_name": {
+                    "type": "string",
+                    "description": "A name for the list, ending in .txt."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload a large list",
+            "content": {
+              "application/json": {
+                "example": {
+                  "upload_id": "upl_2b7d9f10-6c3e-4a1f-8d2b-9e8f7a6b5c4d",
+                  "upload_url": "https://storage.example.com/upload/sign/list.txt?token=...",
+                  "method": "PUT",
+                  "headers": {
+                    "Content-Type": "text/plain"
+                  },
+                  "expires_at": "2026-11-05T11:00:00.000Z"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/estimates": {
+      "post": {
+        "operationId": "createEstimate",
+        "summary": "See what an order would cost",
+        "description": "Counts the entries, works out the price and reports any problem with the list. Charges nothing. Allow up to 5 minutes for the answer.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "checker"
+                ],
+                "properties": {
+                  "checker": {
+                    "type": "string",
+                    "description": "A checker's id from GET /checkers."
+                  },
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The list, one string per entry, up to 100,000 entries and 4 MB. Send this or upload_id."
+                  },
+                  "upload_id": {
+                    "type": "string",
+                    "description": "An upload_id from POST /uploads. Send this or entries."
+                  },
+                  "country": {
+                    "type": "string",
+                    "description": "A two-letter country code, if you want to say which country the numbers are from."
+                  },
+                  "file_name": {
+                    "type": "string",
+                    "description": "A name for the list, ending in .txt."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "See what an order would cost",
+            "content": {
+              "application/json": {
+                "example": {
+                  "checker": "whatsapp_status_detection",
+                  "entries": 2,
+                  "billed_entries": 2000,
+                  "charge": "0.60",
+                  "currency": "USD",
+                  "parts": 1,
+                  "country": {
+                    "code": "US",
+                    "share": 1
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "post": {
+        "operationId": "createOrder",
+        "summary": "Place an order",
+        "description": "Charges your balance and queues the work. Answers 201 for a new order, and 200 with Idempotent-Replay: true for a repeat; a repeat at the same moment can also answer 201, so tell orders apart by id. Allow up to 5 minutes for the answer.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "description": "Up to 200 ASCII characters with no spaces. For 7 days the same key means the same order.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "checker"
+                ],
+                "properties": {
+                  "checker": {
+                    "type": "string",
+                    "description": "A checker's id from GET /checkers."
+                  },
+                  "entries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The list, one string per entry, up to 100,000 entries and 4 MB. Send this or upload_id."
+                  },
+                  "upload_id": {
+                    "type": "string",
+                    "description": "An upload_id from POST /uploads. Send this or entries."
+                  },
+                  "country": {
+                    "type": "string",
+                    "description": "A two-letter country code, if you want to say which country the numbers are from."
+                  },
+                  "file_name": {
+                    "type": "string",
+                    "description": "A name for the list, ending in .txt."
+                  },
+                  "expected_charge": {
+                    "type": "string",
+                    "description": "A price in dollars, such as \"18.00\". The order is refused with price_changed if it costs anything else."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Place an order",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "ord_8f2c1e7a-3b4d-4c5e-9f60-1a2b3c4d5e6f",
+                  "checker": "whatsapp_status_detection",
+                  "status": "queued",
+                  "entries": 2,
+                  "charge": "0.60",
+                  "refunded": "0.00",
+                  "currency": "USD",
+                  "parts": {
+                    "total": 1,
+                    "completed": 0,
+                    "failed": 0
+                  },
+                  "results": null,
+                  "error": null,
+                  "source": "api",
+                  "created_at": "2026-11-05T09:00:00.000Z",
+                  "completed_at": null
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listOrders",
+        "summary": "List your orders",
+        "description": "Newest first. Pass next_cursor back as cursor for the next page.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "How many to return, from 1 to 100. The default is 20.",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "next_cursor from the last page.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List your orders",
+            "content": {
+              "application/json": {
+                "example": {
+                  "orders": [
+                    {
+                      "id": "ord_8f2c1e7a-3b4d-4c5e-9f60-1a2b3c4d5e6f",
+                      "checker": "whatsapp_status_detection",
+                      "status": "completed",
+                      "entries": 2,
+                      "charge": "0.60",
+                      "refunded": "0.00",
+                      "currency": "USD",
+                      "parts": {
+                        "total": 1,
+                        "completed": 1,
+                        "failed": 0
+                      },
+                      "results": {
+                        "registered": 1,
+                        "not_registered": 1
+                      },
+                      "error": null,
+                      "source": "api",
+                      "created_at": "2026-11-05T09:00:00.000Z",
+                      "completed_at": "2026-11-05T09:02:10.000Z"
+                    }
+                  ],
+                  "next_cursor": null
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "One order",
+        "description": "Its status, entries, charge, refund, parts and counts. results is null until a part finishes, and a count is null where the checker does not report it.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The order's id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One order",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "ord_8f2c1e7a-3b4d-4c5e-9f60-1a2b3c4d5e6f",
+                  "checker": "whatsapp_status_detection",
+                  "status": "completed",
+                  "entries": 2,
+                  "charge": "0.60",
+                  "refunded": "0.00",
+                  "currency": "USD",
+                  "parts": {
+                    "total": 1,
+                    "completed": 1,
+                    "failed": 0
+                  },
+                  "results": {
+                    "registered": 1,
+                    "not_registered": 1
+                  },
+                  "error": null,
+                  "source": "api",
+                  "created_at": "2026-11-05T09:00:00.000Z",
+                  "completed_at": "2026-11-05T09:02:10.000Z"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/results": {
+      "get": {
+        "operationId": "getResults",
+        "summary": "Result files",
+        "description": "A download link for each part, good for 15 minutes. A part still running has no link. Contact support if a completed part has none.",
+        "security": [
+          {
+            "bearer": []
+          },
+          {
+            "apiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "The order's id.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Result files",
+            "content": {
+              "application/json": {
+                "example": {
+                  "order_id": "ord_8f2c1e7a-3b4d-4c5e-9f60-1a2b3c4d5e6f",
+                  "status": "completed",
+                  "parts": [
+                    {
+                      "part": 1,
+                      "status": "completed",
+                      "file_name": "result.csv",
+                      "url": "https://storage.example.com/sign/result.csv?token=...",
+                      "expires_at": "2026-11-05T09:17:10.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "A refusal. See the codes in the error schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "invalid_request",
+                  "idempotency_key_required",
+                  "invalid_entries",
+                  "too_few_entries",
+                  "too_many_entries",
+                  "file_too_large",
+                  "country_mismatch",
+                  "mixed_countries",
+                  "upload_not_found",
+                  "upload_changed",
+                  "quote_expired",
+                  "invalid_key",
+                  "revoked_key",
+                  "expired_key",
+                  "insufficient_balance",
+                  "key_blocked",
+                  "ip_not_allowed",
+                  "account_blocked",
+                  "api_access_off",
+                  "missing_scope",
+                  "checker_not_open",
+                  "access_denied",
+                  "not_found",
+                  "idempotency_conflict",
+                  "price_changed",
+                  "payload_too_large",
+                  "too_many_uploads",
+                  "rate_limited",
+                  "too_many_open_orders",
+                  "internal_error",
+                  "api_disabled",
+                  "service_unavailable",
+                  "order_status_unknown"
+                ],
+                "description": "Never changes. Act on this."
+              },
+              "message": {
+                "type": "string",
+                "description": "For a person. May change."
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "docs_url": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
